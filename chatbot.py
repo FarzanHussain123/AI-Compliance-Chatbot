@@ -4,7 +4,7 @@ import streamlit as st
 
 # ====== Configuration ======
 HF_TOKEN = os.getenv("HF_TOKEN")  # from Streamlit Secrets
-HF_MODEL = "google/flan-t5-large"  # ✅ your selected model
+HF_MODEL = "HuggingFaceH4/zephyr-7b-beta"
 
 # ====== Streamlit UI ======
 st.set_page_config(page_title="OSS Compliance Chatbot 💬", page_icon="💬")
