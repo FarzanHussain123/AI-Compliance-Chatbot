@@ -1,34 +1,41 @@
 import os
+import requests
 import streamlit as st
-from openai import OpenAI
 
-# ✅ Fetch API key from environment variable (Streamlit Secrets or local .env)
-api_key = os.getenv("OPENAI_API_KEY")
+# ====== Configuration ======
+HF_TOKEN = os.getenv("HF_TOKEN")  # Hugging Face API token from Streamlit Secrets
+HF_MODEL = "tiiuae/falcon-7b-instruct"  # Free instruct model
 
-if not api_key:
-    st.error("⚠️ OpenAI API key not found. Please set OPENAI_API_KEY in your environment or Streamlit Secrets.")
-    st.stop()
-
-# Initialize client
-client = OpenAI(api_key=api_key)
-
+# ====== Streamlit UI ======
+st.set_page_config(page_title="OSS Compliance Chatbot 💬", page_icon="💬")
 st.title("OSS Compliance Chatbot 💬")
+st.write("Ask me about OSS compliance:")
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = []
+user_input = st.text_input("Your question:")
 
-user_input = st.text_input("Ask me about OSS compliance:")
+# ====== Helper: Hugging Face Inference ======
+def hf_generate(prompt):
+    if not HF_TOKEN:
+        return "⚠️ Hugging Face API token missing. Please add HF_TOKEN in Streamlit → App Settings → Secrets."
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    url = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+    payload = {"inputs": prompt, "options": {"wait_for_model": True}}
 
-if st.button("Send") and user_input:
-    st.session_state["messages"].append({"role": "user", "content": user_input})
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        response.raise_for_status()
+        output = response.json()
+        if isinstance(output, list) and "generated_text" in output[0]:
+            return output[0]["generated_text"]
+        return str(output)
+    except Exception as e:
+        return f"❌ Error calling Hugging Face API: {e}"
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=st.session_state["messages"]
-    )
-
-    answer = response.choices[0].message.content
-    st.session_state["messages"].append({"role": "assistant", "content": answer})
-
-for msg in st.session_state["messages"]:
-    st.write(f"**{msg['role'].capitalize()}**: {msg['content']}")
+# ====== Run Chatbot ======
+if st.button("Send"):
+    if not user_input.strip():
+        st.warning("Please enter a question.")
+    else:
+        with st.spinner("Generating answer..."):
+            answer = hf_generate(user_input)
+        st.write("**Assistant:**", answer)
