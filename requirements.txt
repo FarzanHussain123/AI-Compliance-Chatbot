@@ -1,0 +1,6 @@
+streamlit
+openai
+httpx
+certifi
+langchain
+chromadb
